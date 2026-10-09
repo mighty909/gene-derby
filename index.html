@@ -1,0 +1,1092 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="LEGO synthetic-biology horse race for the Science Centre: build a genetic construct, race the horse it makes.">
+<style>
+  :root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  body{margin:0;font:14px system-ui,-apple-system,sans-serif}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<title>Gene Derby</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: facilitator control rail on the left, four-lane track on the right; stacks to one column on narrow screens. */
+:root{
+  --clay:#c2652e;        /* running-track terracotta, first segment */
+  --flag:#1565d8;        /* brick blue, the single accent */
+  --brick-yellow:#ffc93c;
+  --sky-1:#3fb0ee; --sky-2:#8ed6f7; --sky-3:#cfefff;
+  --sand:#d9a33f;
+  --river:#2f7fc4;
+  --night:#1c2430;
+  --paper:#eef3f7;       /* inner surfaces against the white cards */
+  --ink:#152633;
+  --ink-soft:#5f727f;
+  --line:#cfdbe5;
+  --card:#ffffff;
+  --ok:#2e9e4f;
+  --warn:#c9780a;
+  --bad:#c0341a;
+  --font-title:'Luckiest Guy','Baloo 2',system-ui,cursive;
+  --font-display:'Baloo 2','Nunito',system-ui,sans-serif;
+  --font-body:'Nunito','Segoe UI',system-ui,sans-serif;
+  --font-code:'Space Mono','SF Mono',ui-monospace,monospace;
+  color-scheme:light;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;color:var(--ink);
+  font-family:var(--font-body);font-size:15px;line-height:1.45;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='620' height='210'%3E%3Cg fill='%23ffffff' opacity='.9'%3E%3Cellipse cx='92' cy='74' rx='54' ry='26'/%3E%3Cellipse cx='134' cy='62' rx='39' ry='29'/%3E%3Cellipse cx='58' cy='64' rx='31' ry='20'/%3E%3Cellipse cx='436' cy='150' rx='62' ry='24'/%3E%3Cellipse cx='478' cy='138' rx='41' ry='27'/%3E%3Cellipse cx='398' cy='140' rx='33' ry='19'/%3E%3C/g%3E%3C/svg%3E") repeat-x 0 70px,
+    linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 38%, var(--sky-3) 100%);
+  background-attachment:fixed, fixed;
+}
+.wrap{padding-inline:16px;padding-block:14px 28px;max-width:1500px;margin:0 auto}
+
+/* ---------- header ---------- */
+header{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:30px;text-align:center}
+.lanecfg{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lanepick{display:flex;align-items:center;gap:0;border:2.5px solid var(--ink);border-radius:999px;overflow:hidden;
+  background:var(--card);box-shadow:0 3px 0 rgba(13,48,78,.2)}
+.lanepick .lp-n{font-family:var(--font-display);font-size:12px;padding:0 9px 0 12px;letter-spacing:.02em}
+.lanepick button{font-family:var(--font-body);font-weight:800;font-size:12px;border:0;background:transparent;
+  color:var(--ink-soft);padding:7px 12px;cursor:pointer}
+.lanepick button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.lanepick.fixed{padding-right:12px}
+.lanepick.fixed .lp-n{color:var(--ink)}
+h1{font-family:var(--font-title);font-size:clamp(40px,7vw,70px);margin:0;line-height:.98;
+  letter-spacing:.015em;color:#fff;
+  text-shadow:0 3px 0 #0b3f8e, 0 6px 0 rgba(0,0,0,.18), 4px 4px 14px rgba(10,50,90,.3)}
+h1 span{color:var(--brick-yellow)}
+.tagline{color:#15384f;font-size:15px;font-weight:700;margin:0;max-width:52ch;
+  text-shadow:0 1px 0 rgba(255,255,255,.65)}
+.modes{display:flex;gap:0;border:2px solid var(--ink);border-radius:999px;overflow:hidden;background:var(--card)}
+.modes button{
+  font-family:var(--font-body);font-weight:800;font-size:14px;border:0;background:transparent;color:var(--ink);
+  padding:9px 20px;cursor:pointer;letter-spacing:.02em;
+}
+.modes button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+/* ---------- shell ---------- */
+.shell{display:grid;gap:18px}
+.raceview{min-height:100vh;min-height:96svh;display:flex;flex-direction:column;justify-content:center;gap:14px}
+.panel{display:grid;gap:16px}
+@media (min-width:880px){.panel{grid-template-columns:minmax(0,1fr) minmax(290px,350px);gap:26px;align-items:start}}
+.panel-side details.ref:first-child{border-top:0;margin-top:0;padding-top:0}
+@media (min-width:620px){.builders.duo{grid-template-columns:1fr 1fr;gap:24px}}
+
+.panel{position:relative;background:var(--card);border:3px solid var(--ink);border-radius:18px;padding:20px;
+  box-shadow:0 6px 0 rgba(13,48,78,.22)}
+.panel::before{content:"";position:absolute;top:-12px;left:26px;width:152px;height:13px;pointer-events:none;
+  overflow:hidden;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='152' height='30'%3E%3Cg fill='%23ffffff' stroke='%23152633' stroke-width='3'%3E%3Crect x='3' y='3' width='28' height='26' rx='9'/%3E%3Crect x='40' y='3' width='28' height='26' rx='9'/%3E%3Crect x='77' y='3' width='28' height='26' rx='9'/%3E%3Crect x='114' y='3' width='28' height='26' rx='9'/%3E%3C/g%3E%3C/svg%3E") no-repeat 0 0/152px 30px}
+.panel h2{font-family:var(--font-display);font-size:14px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 2px}
+.panel .sub{color:var(--ink-soft);font-size:13px;margin:0 0 12px}
+
+.builders{display:grid;gap:14px}
+.builder{display:grid;gap:10px;max-width:480px}
+.builder-head{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.who{font-family:var(--font-display);font-size:15px;display:flex;align-items:center;gap:8px}
+.swatch{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--ink)}
+
+/* construct rows */
+.rows{display:grid;gap:7px}
+.rowhdr{display:grid;grid-template-columns:22px repeat(3,1fr) auto;gap:6px;align-items:center;
+  font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft);font-weight:800}
+.rowhdr .rh-last{text-align:right;min-width:52px}
+.crow{display:grid;grid-template-columns:22px repeat(3,1fr) auto;gap:6px;align-items:center}
+.cnum{font-family:var(--font-code);font-size:12px;color:var(--ink-soft);text-align:center}
+.crow input{
+  font-family:var(--font-code);font-weight:700;font-size:16px;text-align:center;
+  width:100%;min-width:0;padding:8px 2px;border:1.5px solid var(--line);border-radius:8px;
+  background:var(--paper);color:var(--ink);
+}
+.crow input::placeholder{color:var(--ink-soft);opacity:.33;font-weight:400}
+.crow input:focus{outline:2.5px solid var(--flag);outline-offset:1px;border-color:transparent}
+.crow input:focus::placeholder{opacity:.18}
+.crow input.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--paper))}
+.decode{font-size:11px;color:var(--ink-soft);text-align:right;min-width:52px;font-weight:600}
+.decode.err{color:var(--bad)}
+.decode.ok{color:var(--ok)}
+.readout{font-size:12px;color:var(--ink-soft);min-height:16px;font-weight:600}
+.readout b{color:var(--ink)}
+
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+button.act{
+  font-family:var(--font-title);font-size:16px;letter-spacing:.03em;border:3px solid var(--ink);
+  border-radius:12px;padding:11px 22px;cursor:pointer;background:var(--card);color:var(--ink);
+  box-shadow:0 4px 0 var(--ink);transition:transform .08s,box-shadow .08s;
+}
+button.act:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+button.act.go{background:var(--ok);color:#fff}
+button.act.go:disabled{opacity:.4;cursor:not-allowed}
+button.act:hover:not(:disabled){filter:brightness(1.06)}
+button.act:focus-visible{outline:3px solid var(--flag);outline-offset:2px}
+
+details.ref{margin-top:14px;border-top:1.5px solid var(--line);padding-top:10px}
+details.ref summary{font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.02em}
+details.ref table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+details.ref th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);padding:4px 6px 4px 0;border-bottom:1px solid var(--line)}
+details.ref td{padding:3px 6px 3px 0;border-bottom:1px solid color-mix(in srgb,var(--line) 50%,transparent)}
+details.ref td.c{font-family:var(--font-code);font-weight:700;color:var(--flag);white-space:nowrap}
+details.ref .grp{font-family:var(--font-display);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding-top:10px;color:var(--ink)}
+.exrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.exrow button{font-size:11px;font-weight:700;font-family:var(--font-body);border:1.5px solid var(--line);
+  background:var(--paper);color:var(--ink);border-radius:999px;padding:5px 11px;cursor:pointer}
+.exrow button:hover{border-color:var(--flag);color:var(--flag)}
+.lockrow{display:flex;gap:6px;align-items:center}
+.lockrow input{flex:1;min-width:0;font-family:var(--font-code);font-size:14px;padding:7px 10px;
+  border:1.5px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)}
+.lockrow input:focus{outline:2.5px solid var(--flag);outline-offset:1px;border-color:transparent}
+.lockrow button{font-family:var(--font-body);font-weight:800;font-size:12px;padding:8px 14px;
+  border:1.5px solid var(--ink);border-radius:8px;background:var(--card);color:var(--ink);cursor:pointer}
+.lockerr{color:var(--bad);font-size:12px;font-weight:700;margin:7px 0 0}
+.lockoff{margin-top:10px;font-family:var(--font-body);font-size:11px;font-weight:700;cursor:pointer;
+  border:1.5px solid var(--line);background:var(--paper);color:var(--ink-soft);border-radius:999px;padding:4px 11px}
+details.ref .brk{margin-top:12px}
+details.ref .brk summary{font-size:12px;color:var(--ink-soft)}
+
+/* ---------- track ---------- */
+.trackcard{position:relative;background:var(--card);border:3px solid var(--ink);border-radius:18px;padding:16px;overflow:hidden;
+  box-shadow:0 6px 0 rgba(13,48,78,.22)}
+.cd{position:absolute;inset:0;z-index:5;display:grid;place-items:center;pointer-events:none;
+  background:color-mix(in srgb,var(--card) 42%,transparent)}
+.cd b{font-family:var(--font-display);font-size:clamp(60px,12vw,120px);line-height:1;color:var(--flag);
+  text-shadow:0 4px 0 color-mix(in srgb,var(--ink) 22%,transparent);animation:cdp .6s ease-out}
+@keyframes cdp{0%{transform:scale(.4);opacity:0}32%{transform:scale(1.12);opacity:1}100%{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.cd b{animation:none}}
+.seghdr{display:grid;grid-template-columns:118px minmax(0,1fr);gap:10px;margin-bottom:6px}
+.segnames{display:grid;grid-template-columns:27.5% 22.5% 22.5% 1fr;gap:3px}
+.segname{font-size:15px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;text-align:center;
+  padding:9px 4px;border-radius:7px;color:#fff;line-height:1.2;
+  display:flex;flex-direction:column;justify-content:center}
+.segname small{display:block;font-size:12.5px;font-weight:700;opacity:.9;letter-spacing:.02em;text-transform:none;margin-top:2px}
+.sg0{background:var(--clay)} .sg1{background:var(--night)} .sg2{background:var(--sand);color:#2a1d05}
+.sg2 small{opacity:.75} .sg3{background:var(--river)}
+
+.lanes{display:grid;gap:5px}
+.lane{display:grid;grid-template-columns:118px minmax(0,1fr);gap:10px;align-items:center}
+.laneinfo{display:grid;gap:3px;min-width:0}
+.lanename{font-family:var(--font-display);font-size:13px;display:flex;align-items:center;gap:6px;min-width:0}
+.lanename em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stam{height:7px;border-radius:99px;background:color-mix(in srgb,var(--line) 70%,transparent);overflow:hidden}
+.stam i{display:block;height:100%;width:100%;background:var(--ok);border-radius:99px;transition:background .3s}
+.stam i.low{background:var(--warn)} .stam i.out{background:var(--bad)}
+.lanemeta{font-size:10px;font-weight:800;letter-spacing:.04em;color:var(--ink-soft);
+  font-variant-numeric:tabular-nums;display:flex;gap:6px;align-items:center}
+.lanemeta .spd{color:var(--ink)}
+.lanemeta .arr{font-size:11px;line-height:1}
+.arr.up{color:var(--ok)} .arr.dn{color:var(--bad)}
+
+.strip{position:relative;height:162px;border-radius:9px;overflow:hidden;border:1.5px solid var(--line)}
+.bands{position:absolute;inset:0;display:grid;grid-template-columns:27.5% 22.5% 22.5% 1fr}
+.band{position:relative;overflow:hidden}
+.b0{background:linear-gradient(180deg,color-mix(in srgb,var(--clay) 34%,var(--card)),color-mix(in srgb,var(--clay) 56%,var(--card)))}
+.b0::after{content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(180deg,transparent 0 40px,color-mix(in srgb,#fff 20%,transparent) 40px 42px);
+  opacity:.45}
+.b1{background:linear-gradient(180deg,color-mix(in srgb,var(--night) 86%,#000),var(--night))}
+.b2{background:linear-gradient(180deg,color-mix(in srgb,var(--sand) 34%,var(--card)),color-mix(in srgb,var(--sand) 58%,var(--card)))}
+.b3{background:color-mix(in srgb,var(--river) 38%,var(--card))}
+.band+.band{border-left:2px dashed color-mix(in srgb,var(--ink) 22%,transparent)}
+/* water surface: drawn over the horses so the river itself hides their legs */
+.waterline{position:absolute;right:0;bottom:0;left:72.5%;height:40%;z-index:3;pointer-events:none;
+  background:color-mix(in srgb,var(--river) 66%,var(--card));
+  box-shadow:inset 0 2px 0 color-mix(in srgb,#fff 30%,transparent)}
+.waterline::after{content:"";position:absolute;left:0;right:0;top:3px;height:4px;overflow:hidden;
+  background:repeating-linear-gradient(90deg,transparent 0 17px,color-mix(in srgb,#fff 34%,transparent) 17px 27px);
+  animation:drift 2.6s linear infinite}
+@keyframes drift{to{transform:translateX(27px)}}
+@media (prefers-reduced-motion:reduce){.waterline::after{animation:none}}
+.b2::after{content:"";position:absolute;top:8px;right:10px;width:36px;height:36px;opacity:.95;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg stroke='%23fff4cf' stroke-width='3.2' stroke-linecap='round'%3E%3Cpath d='M20 2v5M20 33v5M2 20h5M33 20h5M7.3 7.3l3.5 3.5M29.2 29.2l3.5 3.5M32.7 7.3l-3.5 3.5M10.8 29.2l-3.5 3.5'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='8.6' fill='%23fff4cf'/%3E%3C/svg%3E") no-repeat center/contain}
+.b1::after{content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 120%,color-mix(in srgb,#fff 10%,transparent),transparent 70%)}
+.finish{position:absolute;top:0;bottom:0;left:95%;width:9px;z-index:4;
+  background:repeating-conic-gradient(#fff 0 25%,#1a1a1a 0 50%) 0 0/9px 9px}
+.startline{position:absolute;top:0;bottom:0;left:5%;width:4px;border-radius:2px;
+  background:#fff;box-shadow:0 0 0 1px color-mix(in srgb,var(--ink) 28%,transparent)}
+
+.place{position:absolute;right:14px;top:10px;z-index:6;display:grid;place-items:center;
+  width:42px;height:42px;border-radius:50%;font-family:var(--font-display);font-size:13px;
+  color:#241c0d;background:var(--line);border:3px solid var(--card);
+  opacity:0;transform:scale(.4);box-shadow:0 3px 10px rgba(0,0,0,.3)}
+.place.show{animation:placein .5s cubic-bezier(.2,1.6,.4,1) forwards}
+@keyframes placein{to{opacity:1;transform:scale(1)}}
+.place.p1{background:#f0bb44} .place.p2{background:#c6ced6}
+.place.p3{background:#cf8e50} .place.p4{background:#aab1b9}
+@media (prefers-reduced-motion:reduce){.place.show{animation:none;opacity:1;transform:none}}
+
+.runner{position:absolute;top:50%;left:0;width:126px;height:104px;margin-top:-57px;margin-left:-63px;
+  will-change:transform}
+.runner svg{width:100%;height:100%;overflow:visible;display:block}
+.dimmed{filter:brightness(.42) saturate(.6)}
+
+/* out of puff: the horse stops, droops and catches its breath — never blacked out */
+.tired{animation:breathe 1.7s ease-in-out infinite;transform-origin:50% 85%}
+@keyframes breathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.035,.965)}}
+.tired .headg{transform:rotate(15deg);transform-origin:98px 20px;transition:transform .5s ease}
+.tired .sweat{opacity:.95}
+@media (prefers-reduced-motion:reduce){.tired{animation:none}}
+
+/* swimming: body drops to the waterline, legs paddle out of sight, ripples trail */
+.swim .root{transform:translateY(26px)}
+.tag{position:absolute;left:0;bottom:7px;z-index:5;transform:translateX(-50%);
+  font-size:9.5px;font-weight:800;letter-spacing:.04em;padding:2.5px 8px;border-radius:99px;
+  white-space:nowrap;pointer-events:none;color:#fff;background:var(--ink);opacity:0;
+  box-shadow:0 1px 5px rgba(0,0,0,.4)}
+.tag.show{animation:pop 1.5s ease forwards}
+.tag.on{background:var(--ok)} .tag.hit{background:var(--bad)} .tag.dead{background:var(--warn);opacity:1;animation:none}
+@keyframes pop{0%{opacity:0;transform:translate(-50%,8px) scale(.8)}18%{opacity:1;transform:translate(-50%,0) scale(1)}
+  72%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-7px)}}
+
+/* ---------- results ---------- */
+.results{margin-top:16px;border:3px solid var(--ink);border-radius:18px;padding:20px;background:var(--card);
+  box-shadow:0 6px 0 rgba(13,48,78,.22)}
+.results h3{font-family:var(--font-display);margin:0 0 12px;font-size:20px;letter-spacing:.03em}
+.podium{display:grid;gap:7px;margin-bottom:14px}
+.prow{display:grid;grid-template-columns:38px 1fr auto auto;gap:12px;align-items:center;padding:11px 14px;border-radius:9px;
+  background:var(--paper);font-size:17px}
+.prow.you{outline:2px solid var(--flag)}
+.prow .pos{font-family:var(--font-display);font-size:20px;color:var(--ink-soft)}
+.prow.p1 .pos{color:var(--flag)}
+.prow .nm{font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow .sc,.prow .tm{font-family:var(--font-code);font-size:14px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.hint{border-left:5px solid var(--flag);padding:13px 17px;border-radius:0 9px 9px 0;
+  background:color-mix(in srgb,var(--flag) 9%,var(--card));font-size:16.5px;line-height:1.5}
+.hint b{font-family:var(--font-display);font-size:14px;letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:5px}
+.hint+.hint{margin-top:10px}
+.breakdown{width:100%;border-collapse:collapse;font-size:14px;margin-top:12px}
+.breakdown th,.breakdown td{padding:7px 9px;text-align:center;border-bottom:1px solid var(--line);
+  font-variant-numeric:tabular-nums}
+.breakdown th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft)}
+.breakdown td:first-child,.breakdown th:first-child{text-align:left;font-weight:800}
+.breakdown .neg{color:var(--bad)}
+
+.confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.confetti i{position:absolute;width:7px;height:11px;border-radius:1px;animation:fall linear forwards}
+@keyframes fall{0%{transform:translateY(-20px) rotate(0);opacity:1}100%{transform:translateY(120px) rotate(540deg);opacity:0}}
+
+.empty{display:flex;align-items:center;justify-content:center;height:162px;color:var(--ink-soft);
+  font-size:13px;border:1.5px dashed var(--line);border-radius:9px}
+
+@media (prefers-reduced-motion:reduce){
+  .confetti{display:none}
+  .tag.show{animation:none;opacity:1}
+  button.act:hover:not(:disabled){filter:none}
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Gene <span>Derby</span></h1>
+      <p class="tagline">Build a genetic construct &middot; race the horse it makes</p>
+    </div>
+    <div class="lanecfg" id="lanecfg" role="group" aria-label="Who races in each lane"></div>
+  </header>
+
+  <div class="shell">
+    <!-- ================= build panel ================= -->
+    <div class="panel">
+     <div class="panel-main">
+      <h2>Key in the build</h2>
+      <p class="sub">One row per construct. Up to 5.</p>
+
+      <div class="builders" id="builders"></div>
+
+      <div class="btnrow">
+        <button class="act go" id="start">Start race</button>
+        <button class="act" id="reset">Clear</button>
+      </div>
+     </div>
+
+     <div class="panel-side">
+      <details class="ref">
+        <summary>Brick codes</summary>
+        <table>
+          <tr><td class="grp" colspan="2">Promoter &mdash; when the gene is on</td></tr>
+          <tr><td class="c">101</td><td>Constitutive &middot; all 4 segments</td></tr>
+          <tr><td class="c">111</td><td>Dark sensor &middot; tunnel only</td></tr>
+          <tr><td class="c">112</td><td>Heat sensor &middot; desert only</td></tr>
+          <tr><td class="c">113</td><td>Water sensor &middot; river only</td></tr>
+          <tr><td class="grp" colspan="2">RBS &mdash; how much is made</td></tr>
+          <tr><td class="c">201</td><td>Weak &middot; +2 speed, &times;1 stamina</td></tr>
+          <tr><td class="c">202</td><td>Medium &middot; +4 speed, &times;2 stamina</td></tr>
+          <tr><td class="c">203</td><td>Strong &middot; +8 speed, &times;6 stamina</td></tr>
+          <tr><td class="grp" colspan="2">Gene &mdash; what it does</td></tr>
+          <tr><td class="c">301</td><td>Long legs &middot; speed everywhere</td></tr>
+          <tr><td class="c">302</td><td>Aerodynamic tail &middot; speed everywhere</td></tr>
+          <tr><td class="c">303</td><td>Big eyes &middot; vision, tunnel</td></tr>
+          <tr><td class="c">304</td><td>Glow &middot; vision, tunnel</td></tr>
+          <tr><td class="c">305</td><td>Sweat glands &middot; cooling, desert</td></tr>
+          <tr><td class="c">306</td><td>Big ears &middot; cooling, desert</td></tr>
+          <tr><td class="c">307</td><td>Webbed feet &middot; swimming, river</td></tr>
+          <tr><td class="c">308</td><td>Buoyant belly &middot; swimming, river</td></tr>
+        </table>
+      </details>
+
+      <details class="ref">
+        <summary>Facilitator tools</summary>
+        <div id="facilLock">
+          <p class="sub" style="margin:8px 0 6px">Staff only. Enter the facilitator code.</p>
+          <div class="lockrow">
+            <input id="facilCode" type="password" autocomplete="off" placeholder="code" aria-label="Facilitator code">
+            <button type="button" id="facilGo">Unlock</button>
+          </div>
+          <p class="lockerr" id="facilErr" hidden>That code isn't right.</p>
+        </div>
+        <div id="facilBody" hidden>
+          <p class="sub" style="margin:8px 0 0">Load a demo build into player 1 for staff training.</p>
+          <div class="exrow" id="examples"></div>
+          <label style="display:flex;gap:7px;align-items:center;margin-top:10px;font-size:12px;font-weight:700;cursor:pointer">
+            <input type="checkbox" id="showCost"> Show stamina cost while keying in
+          </label>
+          <p class="sub" style="margin:10px 0 0">The speed and stamina breakdown now appears under each result.</p>
+          <button type="button" class="lockoff" id="facilLockBtn">Lock again</button>
+        </div>
+      </details>
+     </div>
+    </div>
+
+    <!-- ================= race ================= -->
+    <div class="raceview" id="raceview">
+      <div class="trackcard">
+        <div class="seghdr">
+          <div></div>
+          <div class="segnames">
+            <div class="segname sg0">Race track</div>
+            <div class="segname sg1">Dark tunnel<small>&minus;4 speed</small></div>
+            <div class="segname sg2">Desert<small>&minus;4 speed</small></div>
+            <div class="segname sg3">River<small>&minus;4 speed</small></div>
+          </div>
+        </div>
+        <div class="lanes" id="lanes"></div>
+      </div>
+      <div id="results"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   PARTS — matches the Science Centre rules sheet
+   ============================================================ */
+const PROMOTERS = {
+  101:{name:'Constitutive', tag:'always on', segs:[0,1,2,3]},
+  111:{name:'Dark sensor',  tag:'tunnel',    segs:[1]},
+  112:{name:'Heat sensor',  tag:'desert',    segs:[2]},
+  113:{name:'Water sensor', tag:'river',     segs:[3]}
+};
+const RBS = {
+  201:{name:'Weak',   speed:2, mult:1},
+  202:{name:'Medium', speed:4, mult:2},
+  203:{name:'Strong', speed:8, mult:6}
+};
+const GENES = {
+  301:{name:'Long legs',        useful:[0,1,2,3], feat:'legs'},
+  302:{name:'Aerodynamic tail', useful:[0,1,2,3], feat:'tail'},
+  303:{name:'Big eyes',         useful:[1],       feat:'eyes'},
+  304:{name:'Glow',             useful:[1],       feat:'glow'},
+  305:{name:'Sweat glands',     useful:[2],       feat:'sweat'},
+  306:{name:'Big ears',         useful:[2],       feat:'ears'},
+  307:{name:'Webbed feet',      useful:[3],       feat:'web'},
+  308:{name:'Buoyant belly',    useful:[3],       feat:'belly'}
+};
+const SEGS = [
+  {name:'Race track',  hazard:0, need:null},
+  {name:'Dark tunnel', hazard:4, need:'vision'},
+  {name:'Desert',      hazard:4, need:'cooling'},
+  {name:'River',       hazard:4, need:'swimming'}
+];
+const NEED_GENES = {vision:[303,304], cooling:[305,306], swimming:[307,308]};
+const STAMINA = 24, MAX_C = 5;
+
+/* race tuning: speed = clamp(12 + segment score, 14, 34); time per segment = K / speed */
+const K = 92, SPD_FLOOR = 14, SPD_CEIL = 34;
+const spdOf = s => Math.max(SPD_FLOOR, Math.min(SPD_CEIL, 12 + (Number.isFinite(s) ? s : 0)));
+/* clamp to a real segment index even if pos is ever non-finite */
+const segIdxOf = pos => Math.max(0, Math.min(3, Math.floor(pos) || 0));
+
+/* ============================================================
+   SCORING
+   ============================================================ */
+function evaluate(cons){
+  const seg = SEGS.map((S,i)=>{
+    let score = -S.hazard, drain = 0, on = [];
+    cons.forEach(c=>{
+      const P=PROMOTERS[c.p], R=RBS[c.r], G=GENES[c.g];
+      if(!P||!R||!G) return;
+      if(P.segs.includes(i)){
+        drain += R.mult;
+        on.push(G.feat);
+        if(G.useful.includes(i)) score += R.speed;
+      }
+    });
+    return {score, drain, on};
+  });
+  return {
+    seg,
+    total: seg.reduce((a,b)=>a+b.score,0),
+    cost:  seg.reduce((a,b)=>a+b.drain,0)
+  };
+}
+
+/* ============================================================
+   HORSE DRAWING
+   ============================================================ */
+const PAL = {
+  you:   {coat:'#b5703f', dark:'#8b5024', mane:'#432305'},
+  you2:  {coat:'#c057a8', dark:'#90307c', mane:'#45103a'},
+  ribo:  {coat:'#49a8a0', dark:'#2d7a73', mane:'#154641'},
+  codon: {coat:'#8f86d6', dark:'#6058ae', mane:'#322c66'},
+  helix: {coat:'#d2546a', dark:'#a32f45', mane:'#5c1422'},
+  p3:    {coat:'#7f9f33', dark:'#5c7620', mane:'#2d3c0c'},
+  p4:    {coat:'#4a74a8', dark:'#2f5280', mane:'#132b47'}
+};
+
+function horseSVG(pal){
+  return `<svg viewBox="0 0 140 110" aria-hidden="true">
+    <defs>
+      <radialGradient id="gl" cx="50%" cy="50%">
+        <stop offset="0%" stop-color="#fff59a" stop-opacity=".95"/>
+        <stop offset="55%" stop-color="#ffe14d" stop-opacity=".35"/>
+        <stop offset="100%" stop-color="#ffd000" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <g class="glow" opacity="0"><circle cx="74" cy="46" r="56" fill="url(#gl)"/></g>
+    <g class="root">
+      <!-- back legs -->
+      <g class="leg" data-h="46" data-p="0">
+        <rect class="shin" x="42" y="56" width="9" height="34" rx="4.5" fill="${pal.dark}"/>
+        <rect class="hoof" x="40" y="86" width="13" height="7" rx="3" fill="${pal.mane}"/>
+      </g>
+      <g class="leg" data-h="56" data-p="0.45">
+        <rect class="shin" x="52" y="56" width="9" height="34" rx="4.5" fill="${pal.dark}"/>
+        <rect class="hoof" x="50" y="86" width="13" height="7" rx="3" fill="${pal.mane}"/>
+      </g>
+      <!-- tail -->
+      <path class="tail" d="M30 40 q-16 6 -18 24 q10 -12 20 -10 z" fill="${pal.mane}"/>
+      <!-- body -->
+      <ellipse class="belly" cx="62" cy="56" rx="31" ry="16" fill="${pal.dark}"/>
+      <ellipse cx="64" cy="46" rx="34" ry="20" fill="${pal.coat}"/>
+      <!-- neck + head -->
+      <path d="M86 36 q10 -6 16 -20 l14 5 q-6 16 -16 24 z" fill="${pal.coat}"/>
+      <path class="mane" d="M88 20 q10 -8 16 -14 l6 3 q-8 8 -12 18 z" fill="${pal.mane}"/>
+      <g class="headg">
+        <ellipse class="ear" cx="109" cy="7" rx="4" ry="8" fill="${pal.coat}" transform="rotate(-14 109 7)"/>
+        <ellipse class="ear" cx="117" cy="8" rx="4" ry="8" fill="${pal.dark}" transform="rotate(6 117 8)"/>
+        <ellipse cx="117" cy="21" rx="16" ry="11" fill="${pal.coat}" transform="rotate(14 117 21)"/>
+        <ellipse cx="130" cy="27" rx="7" ry="6" fill="${pal.dark}"/>
+        <circle cx="132" cy="25" r="1.3" fill="${pal.mane}"/>
+        <g class="eyeg"><circle class="eyew" cx="119" cy="16" r="3" fill="#fff"/><circle class="eyep" cx="120" cy="16" r="1.7" fill="#17120c"/></g>
+      </g>
+      <!-- front legs -->
+      <g class="leg" data-h="74" data-p="2.35">
+        <rect class="shin" x="70" y="56" width="9" height="34" rx="4.5" fill="${pal.coat}"/>
+        <rect class="hoof" x="68" y="86" width="13" height="7" rx="3" fill="${pal.mane}"/>
+      </g>
+      <g class="leg" data-h="84" data-p="2.8">
+        <rect class="shin" x="80" y="56" width="9" height="34" rx="4.5" fill="${pal.dark}"/>
+        <rect class="hoof" x="78" y="86" width="13" height="7" rx="3" fill="${pal.mane}"/>
+      </g>
+      <g class="sweat" opacity="0">
+        <circle cx="104" cy="6" r="3" fill="#7fd0ff"/><circle cx="96" cy="0" r="2.2" fill="#7fd0ff"/>
+      </g>
+    </g>
+  </svg>`;
+}
+
+/* apply feature morphs to a rendered horse */
+function applyFeats(el, feats){
+  const legs = el.querySelectorAll('.leg');
+  const long = feats.has('legs');
+  legs.forEach(g=>{
+    const shin = g.querySelector('.shin'), hoof = g.querySelector('.hoof');
+    shin.setAttribute('height', long ? 44 : 34);
+    hoof.setAttribute('y', long ? 96 : 86);
+    hoof.setAttribute('width', feats.has('web') ? 19 : 13);
+    hoof.setAttribute('rx', feats.has('web') ? 7 : 3);
+    hoof.setAttribute('x', parseFloat(shin.getAttribute('x')) - (feats.has('web') ? 5 : 2));
+  });
+  el.querySelector('.root').setAttribute('transform', long ? 'translate(0,-9)' : 'translate(0,0)');
+
+  const tail = el.querySelector('.tail');
+  tail.setAttribute('d', feats.has('tail')
+    ? 'M30 38 q-26 2 -34 26 q4 -6 14 -6 q-8 8 -8 16 q14 -14 30 -20 z'
+    : 'M30 40 q-16 6 -18 24 q10 -12 20 -10 z');
+
+  const belly = el.querySelector('.belly');
+  belly.setAttribute('ry', feats.has('belly') ? 21 : 16);
+  belly.setAttribute('rx', feats.has('belly') ? 35 : 31);
+  belly.setAttribute('cy', feats.has('belly') ? 58 : 56);
+
+  const big = feats.has('eyes');
+  el.querySelector('.eyew').setAttribute('r', big ? 6 : 3);
+  el.querySelector('.eyep').setAttribute('r', big ? 3.2 : 1.7);
+
+  const ears = el.querySelectorAll('.ear');
+  ears.forEach(e=>{
+    e.setAttribute('rx', feats.has('ears') ? 8 : 4);
+    e.setAttribute('ry', feats.has('ears') ? 15 : 8);
+  });
+
+  el.querySelector('.glow').setAttribute('opacity', feats.has('glow') ? 1 : 0);
+  el.querySelector('.sweat').setAttribute('opacity', feats.has('sweat') ? .95 : 0);
+}
+
+/* ============================================================
+   NPCs — fixed per-segment scores (no stamina limit)
+   ============================================================ */
+const NPCS = [
+  {name:'Ribo',  pal:PAL.ribo,  scores:[5,5,5,5]},
+  {name:'Codon', pal:PAL.codon, scores:[8,4,5,2]},
+  {name:'Helix', pal:PAL.helix, scores:[2,5,7,10]}
+];
+
+const EXAMPLES = [
+  {label:'Matched promoters', rows:[[101,202,301],[101,202,302],[111,202,303],[112,202,305],[113,202,307]]},
+  {label:'Wrong promoters',   rows:[[101,202,301],[101,202,303],[101,202,305],[],[]]},
+  {label:'Overexpression',    rows:[[101,203,301],[101,203,302],[101,203,303],[101,203,305],[101,203,307]]},
+  {label:'Barely anything',   rows:[[101,201,301],[],[],[],[]]}
+];
+
+/* ============================================================
+   STATE + BUILD UI
+   ============================================================ */
+let laneKind = ['player','bot','bot','bot'];
+const PLAYER_PALS = [PAL.you, PAL.you2, PAL.p3, PAL.p4];
+const playerLanes = () => laneKind.map((k,i)=>k === 'player' ? i : -1).filter(i=>i >= 0);
+function laneName(i){
+  if(laneKind[i] === 'bot') return NPCS[i-1].name;
+  const pl = playerLanes();
+  return pl.length === 1 ? 'You' : 'Player ' + (pl.indexOf(i) + 1);
+}
+const lanePal = i => laneKind[i] === 'bot' ? NPCS[i-1].pal : PLAYER_PALS[i];
+let raf = null, racing = false;
+const $ = s => document.querySelector(s);
+const buildersEl = $('#builders'), lanesEl = $('#lanes'), resultsEl = $('#results');
+
+function builderMarkup(idx, label, pal){
+  const rows = Array.from({length:MAX_C}, (_,i)=>`
+    <div class="crow">
+      <span class="cnum">${i+1}</span>
+      <input id="b${idx}r${i}p" inputmode="numeric" maxlength="3" placeholder="101" aria-label="Construct ${i+1} promoter">
+      <input id="b${idx}r${i}r" inputmode="numeric" maxlength="3" placeholder="202" aria-label="Construct ${i+1} RBS">
+      <input id="b${idx}r${i}g" inputmode="numeric" maxlength="3" placeholder="301" aria-label="Construct ${i+1} gene">
+      <span class="decode" data-dec="${idx}-${i}"></span>
+    </div>`).join('');
+  return `<div class="builder" data-b="${idx}">
+    <div class="builder-head">
+      <span class="who"><span class="swatch" style="background:${pal.coat}"></span>${label}</span>
+    </div>
+    <div class="rows">
+      <div class="rowhdr"><span></span><span>Promoter</span><span>RBS</span><span>Gene</span><span class="rh-last">Cost</span></div>
+      ${rows}
+    </div>
+    <div class="readout" data-ro="${idx}"></div>
+  </div>`;
+}
+
+function renderBuilders(){
+  const pl = playerLanes();
+  buildersEl.className = 'builders' + (pl.length > 1 ? ' duo' : '');
+  buildersEl.innerHTML = pl.map(i=>builderMarkup(i, laneName(i), lanePal(i))).join('');
+  buildersEl.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      inp.value = inp.value.replace(/\D/g,'');
+      if(inp.value.length === 3){
+        const nx = nextInput(inp);
+        if(nx) nx.focus();
+      }
+      refresh();
+    });
+    inp.addEventListener('focus', ()=>inp.select());
+  });
+  refresh();
+}
+function nextInput(inp){
+  const all = [...buildersEl.querySelectorAll('input')];
+  return all[all.indexOf(inp)+1] || null;
+}
+
+function readBuilder(idx){
+  const cons = [], errs = [];
+  for(let i=0;i<MAX_C;i++){
+    const p = $(`#b${idx}r${i}p`).value, r = $(`#b${idx}r${i}r`).value, g = $(`#b${idx}r${i}g`).value;
+    const dec = buildersEl.querySelector(`[data-dec="${idx}-${i}"]`);
+    const inputs = [$(`#b${idx}r${i}p`), $(`#b${idx}r${i}r`), $(`#b${idx}r${i}g`)];
+    inputs.forEach(x=>x.classList.remove('bad'));
+    if(!p && !r && !g){ dec.textContent=''; dec.className='decode'; continue; }
+    const P = PROMOTERS[p], R = RBS[r], G = GENES[g];
+    if(!P) inputs[0].classList.add('bad');
+    if(!R) inputs[1].classList.add('bad');
+    if(!G) inputs[2].classList.add('bad');
+    if(!P || !R || !G){
+      dec.textContent = 'check'; dec.className = 'decode err';
+      errs.push(i+1); continue;
+    }
+    const cost = R.mult * P.segs.length;
+    dec.textContent = $('#showCost').checked ? `${cost}` : '✓';
+    dec.className = 'decode ok';
+    cons.push({p:+p, r:+r, g:+g});
+  }
+  return {cons, errs};
+}
+
+function refresh(){
+  let ok = true;
+  for(const i of playerLanes()){
+    const {cons, errs} = readBuilder(i);
+    const ro = buildersEl.querySelector(`[data-ro="${i}"]`);
+    if(errs.length){ ro.innerHTML = `Row ${errs.join(', ')}: that code isn't on the brick list.`; ok = false; }
+    else if(!cons.length){ ro.innerHTML = 'No constructs yet &mdash; this horse will run on base speed alone.'; }
+    else {
+      const e = evaluate(cons);
+      ro.innerHTML = $('#showCost').checked
+        ? `<b>${cons.length}</b> construct${cons.length>1?'s':''} &middot; stamina <b>${e.cost}</b>/${STAMINA}`
+        : `<b>${cons.length}</b> construct${cons.length>1?'s':''} ready.`;
+    }
+  }
+  $('#start').disabled = !ok || racing;
+}
+
+/* ============================================================
+   RACE
+   ============================================================ */
+let horses = [];
+
+function buildHorses(){
+  const base = { pos:0, phase:0, state:'ready', time:0, stamina:STAMINA };
+  return laneKind.map((kind, i)=>{
+    if(kind === 'bot'){
+      const N = NPCS[i-1];
+      return Object.assign({}, base, {
+        name:N.name, pal:N.pal, player:false, cons:[],
+        seg:N.scores.map(sc=>({score:sc, drain:0, on:[]})), cost:0
+      });
+    }
+    const {cons} = readBuilder(i);
+    const ev = evaluate(cons);
+    return Object.assign({}, base, {
+      name:laneName(i), pal:lanePal(i), player:true, cons, seg:ev.seg, cost:ev.cost
+    });
+  });
+}
+
+function renderLanes(){
+  lanesEl.innerHTML = horses.map((h,i)=>`
+    <div class="lane">
+      <div class="laneinfo">
+        <span class="lanename"><span class="swatch" style="background:${h.pal.coat}"></span><em>${h.name}</em></span>
+        ${h.player ? `<span class="stam"><i data-stam="${i}"></i></span>` : `<span style="height:7px"></span>`}
+        <span class="lanemeta"><span class="spd" data-spd="${i}">&mdash;</span><span class="arr" data-arr="${i}"></span></span>
+      </div>
+      <div class="strip">
+        <div class="bands"><div class="band b0"></div><div class="band b1"></div><div class="band b2"></div><div class="band b3"></div></div>
+        <div class="startline"></div>
+        <div class="waterline"></div>
+        <div class="finish"></div>
+        <div class="runner" data-run="${i}">${horseSVG(h.pal)}</div>
+        <span class="tag" data-tag="${i}"></span>
+        <span class="place" data-place="${i}"></span>
+      </div>
+    </div>`).join('');
+  horses.forEach((h,i)=>{
+    h.el  = lanesEl.querySelector(`[data-run="${i}"]`);
+    h.svg = h.el.querySelector('svg');
+    h.tag = lanesEl.querySelector(`[data-tag="${i}"]`);
+    h.bar = lanesEl.querySelector(`[data-stam="${i}"]`);
+    h.spdEl = lanesEl.querySelector(`[data-spd="${i}"]`);
+    h.arrEl = lanesEl.querySelector(`[data-arr="${i}"]`);
+    h.legs = [...h.svg.querySelectorAll('.leg')];
+    h.tailEl = h.svg.querySelector('.tail');
+    h.placeEl = lanesEl.querySelector(`[data-place="${i}"]`);
+    paint(h, 0);
+    place(h);
+  });
+}
+
+function featsFor(h, segIdx){
+  const f = new Set();
+  h.cons.forEach(c=>{
+    const P = PROMOTERS[c.p], G = GENES[c.g];
+    if(P && G && P.segs.includes(segIdx)) f.add(G.feat);
+  });
+  return f;
+}
+function paint(h, segIdx){
+  applyFeats(h.svg, h.player ? featsFor(h, segIdx) : new Set(segIdx===0?[]:[]));
+}
+function place(h){
+  // 5% at the start line, 95% at the finish — the same scale the segment bands use,
+  // so a horse reaches each boundary exactly when its segment index changes
+  const pct = (h.pos / 4) * 100;
+  const x = `calc(5% + ${pct * 0.90}%)`;
+  h.el.style.left = x;
+  if(h.tag) h.tag.style.left = x;
+}
+const ORD = n => n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : n + 'th';
+function showPlace(h, n){
+  if(!h.placeEl) return;
+  h.placeEl.textContent = ORD(n);
+  h.placeEl.className = 'place p' + Math.min(n, 4) + ' show';
+}
+function showTag(h, text, cls){
+  h.tag.textContent = text;
+  h.tag.className = 'tag ' + cls;
+  void h.tag.offsetWidth;
+  h.tag.classList.add(cls === 'dead' ? 'dead' : 'show');
+}
+
+let cdTimer = null;
+function startRace(){
+  if(racing) return;
+  horses = buildHorses();
+  renderLanes();
+  resultsEl.innerHTML = '';
+  racing = true; $('#start').disabled = true;
+
+  const view = document.getElementById('raceview');
+  if(view) view.scrollIntoView({behavior:'smooth', block:'start'});
+
+  const card = lanesEl.closest('.trackcard');
+  const cd = document.createElement('div');
+  cd.className = 'cd'; cd.innerHTML = '<b>3</b>';
+  card.appendChild(cd);
+  const beats = ['3','2','1','GO'];
+  let n = 0;
+  const tick = ()=>{
+    n++;
+    if(n < beats.length){
+      cd.innerHTML = `<b>${beats[n]}</b>`;
+      cdTimer = setTimeout(tick, n === beats.length-1 ? 520 : 680);
+    } else {
+      cd.remove(); cdTimer = null; beginRace();
+    }
+  };
+  cdTimer = setTimeout(tick, 680);
+}
+
+function beginRace(){
+  horses.forEach(h=>{ h.state = 'running'; h.enter = -1; });
+  let last = performance.now(), elapsed = 0, finishOrder = [];
+
+  const step = now => {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now; elapsed += dt;
+    let live = 0;
+
+    horses.forEach(h=>{
+      if(h.state !== 'running'){ return; }
+      live++;
+      const si = segIdxOf(h.pos);
+
+      if(si !== h.enter){
+        const prev = h.enter;
+        h.enter = si;
+        paint(h, si);
+        if(prev >= 0 || si === 0){
+          const S = SEGS[si];
+          if(S.need && h.player){
+            const covered = h.cons.some(c => PROMOTERS[c.p]?.segs.includes(si) && NEED_GENES[S.need].includes(c.g));
+            if(covered) showTag(h, 'SENSOR ON', 'on');
+            else showTag(h, '− 4 ' + S.name.toUpperCase(), 'hit');
+          }
+        }
+      }
+
+      const sp = spdOf(h.seg[si].score);
+      let dp = (sp / K) * dt;
+      if(!Number.isFinite(dp)) dp = 0;
+
+      if(h.player && h.seg[si].drain > 0){
+        const need = h.seg[si].drain * dp;
+        if(h.stamina <= 0.0001){
+          // a build costing exactly the budget should just make it over the line
+          if(h.pos >= 3.96){
+            h.pos = 4; h.state = 'done'; h.time = elapsed; finishOrder.push(h);
+            showPlace(h, finishOrder.length); place(h); return;
+          }
+          h.state = 'spent'; h.el.style.transform = '';
+          h.svg.classList.remove('dimmed'); h.svg.classList.add('tired');
+          showTag(h, 'OUT OF STAMINA', 'dead');
+          return;
+        }
+        if(need > h.stamina){ dp = h.stamina / h.seg[si].drain; h.stamina = 0; }
+        else h.stamina -= need;
+      }
+
+      h.pos = Math.min(4, h.pos + dp);
+      h.phase += dt * sp * 0.50;
+
+      if(h.pos >= 4){ h.state = 'done'; h.time = elapsed; finishOrder.push(h); showPlace(h, finishOrder.length); }
+
+      // swimming: the river itself hides the legs, so the body just settles into it
+      const swimming = h.pos >= 3.15;   // body clear of the bank, not just its nose
+      h.svg.classList.toggle('swim', swimming);
+
+      // gallop: a bound in the stride, legs tucking on the swing-through, body pitching
+      const g8 = h.phase;
+      const bob = swimming
+        ? Math.sin(g8 * 0.85) * 3.2
+        : Math.pow(Math.max(0, Math.sin(g8)), 1.25) * 6.4;
+      h.el.style.marginTop = (-57 - bob) + 'px';
+      h.el.style.transform = swimming ? '' : `rotate(${(Math.sin(g8 * 2 + 0.8) * 2.6).toFixed(2)}deg)`;
+      h.legs.forEach(gl=>{
+        const ph = parseFloat(gl.dataset.p), hx = parseFloat(gl.dataset.h);
+        const sw = Math.sin(g8 + ph);
+        const a = sw * (swimming ? 34 : 46);
+        const tuck = swimming ? 1 : 1 - 0.28 * Math.max(0, sw);
+        gl.setAttribute('transform',
+          `rotate(${a.toFixed(2)} ${hx} 58) translate(0 58) scale(1 ${tuck.toFixed(3)}) translate(0 -58)`);
+      });
+      if(h.tailEl){
+        const t = Math.sin(g8 + 1.2) * (swimming ? 4 : 10);
+        h.tailEl.setAttribute('transform', `rotate(${t.toFixed(2)} 30 40)`);
+      }
+      // tunnel dimming unless vision is active
+      if(si === 1){
+        const f = h.player ? featsFor(h, 1) : new Set();
+        h.svg.classList.toggle('dimmed', !(f.has('eyes') || f.has('glow')));
+      } else if(h.state === 'running'){
+        h.svg.classList.remove('dimmed');
+      }
+      place(h);
+      if(h.spdEl){ h.spdEl.innerHTML = Math.round(sp) + ' <span style="opacity:.55;font-weight:700">spd</span>'; }
+    });
+
+    // arrows comparing to previous segment
+    horses.forEach(h=>{
+      if(!h.arrEl) return;
+      const si = segIdxOf(h.pos);
+      if(si === 0 || h.state !== 'running'){ h.arrEl.textContent=''; h.arrEl.className='arr'; return; }
+      const d = h.seg[si].score - h.seg[si-1].score;
+      h.arrEl.textContent = d > 0 ? '▲' : d < 0 ? '▼' : '';
+      h.arrEl.className = 'arr ' + (d > 0 ? 'up' : d < 0 ? 'dn' : '');
+    });
+
+    horses.forEach(h=>{ if(h.player && h.bar){
+      const f = Math.max(0, h.stamina / STAMINA);
+      h.bar.style.width = (f*100) + '%';
+      h.bar.className = f <= 0.001 ? 'out' : f < 0.25 ? 'low' : '';
+    }});
+
+    if(live === 0 || elapsed > 70){ finish(finishOrder, elapsed); return; }
+    raf = requestAnimationFrame(step);
+  };
+  raf = requestAnimationFrame(step);
+}
+
+function finish(order, elapsed){
+  racing = false; $('#start').disabled = false;
+  horses.forEach(h=>{ h.el.style.transform = ''; });
+  const spent = horses.filter(h=>h.state === 'spent');
+  order.sort((a,b)=>a.time-b.time);
+  const ranked = [...order, ...spent.sort((a,b)=>b.pos-a.pos)];
+
+  // celebrate / commiserate
+  ranked.forEach((h,i)=>{
+    if(h.state === 'spent') return;
+    if(i === 0){ h.svg.classList.remove('swim'); winAnim(h); } else { h.el.style.filter = 'saturate(.85)'; }
+  });
+
+  const you = horses.filter(h=>h.player);
+  const parts = [];
+
+  parts.push('<div class="results"><h3>Result</h3><div class="podium">' +
+    ranked.map((h,i)=>`<div class="prow ${i===0?'p1':''} ${h.player?'you':''}">
+        <span class="pos">${h.state==='spent'?'&mdash;':i+1}</span>
+        <span class="nm">${h.name}</span>
+        <span class="sc">${h.seg.reduce((a,b)=>a+b.score,0)} spd</span>
+        <span class="tm">${h.state==='spent'?'stopped at '+Math.round(h.pos/4*100)+'%':h.time.toFixed(1)+'s'}</span>
+      </div>`).join('') + '</div>');
+
+  you.forEach(h=>{
+    parts.push(hintsFor(h, ranked.indexOf(h)));
+  });
+
+  // per-segment breakdown — facilitators only
+  const h0 = you[0];
+  if(facilUnlocked && h0 && h0.cons.length){
+    parts.push(`<details class="ref brk"><summary>Speed and stamina breakdown</summary>
+      <table class="breakdown">
+      <tr><th>${h0.name}</th><th>Track</th><th>Tunnel</th><th>Desert</th><th>River</th><th>Total</th></tr>
+      <tr><td>Speed</td>${h0.seg.map(s=>`<td class="${s.score<0?'neg':''}">${s.score}</td>`).join('')}
+        <td><b>${h0.seg.reduce((a,b)=>a+b.score,0)}</b></td></tr>
+      <tr><td>Stamina used</td>${h0.seg.map(s=>`<td>${s.drain}</td>`).join('')}
+        <td><b>${h0.cost}/${STAMINA}</b></td></tr>
+    </table></details>`);
+  }
+  parts.push('</div>');
+  resultsEl.innerHTML = parts.join('');
+  setTimeout(()=>{
+    const r = resultsEl.firstElementChild;
+    if(r) r.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }, 1700);
+}
+
+function hintsFor(h, place){
+  const out = [];
+  if(h.state === 'spent'){
+    out.push(`<div class="hint"><b>${h.name} is puffed out</b>
+      Too many genes were switched on for too long &mdash; the horse couldn't keep them all running.
+      Try a sensor promoter so a gene only turns on in the segment that needs it, or a weaker RBS.</div>`);
+  }
+  // wasted constitutive on a situational gene
+  const wasted = h.cons.filter(c=>{
+    const P = PROMOTERS[c.p], G = GENES[c.g];
+    return P && G && P.segs.length === 4 && G.useful.length === 1;
+  });
+  if(wasted.length){
+    const w = wasted.map(c=>GENES[c.g].name);
+    const names = w.length === 1 ? w[0] : w.slice(0,-1).join(', ') + ' and ' + w[w.length-1];
+    out.push(`<div class="hint"><b>Paying for genes you can't use</b>
+      ${names} only help in one segment, but a constitutive promoter keeps them on for all four.
+      The matching sensor does the same job for a quarter of the stamina.</div>`);
+  }
+  // uncovered hazards
+  const gaps = [1,2,3].filter(i=>{
+    const S = SEGS[i];
+    return !h.cons.some(c=>PROMOTERS[c.p]?.segs.includes(i) && NEED_GENES[S.need].includes(c.g));
+  });
+  if(gaps.length && h.state !== 'spent'){
+    const n = gaps.map(i=>'the ' + SEGS[i].name.toLowerCase());
+    const list = n.length === 1 ? n[0] : n.slice(0,-1).join(', ') + ' and ' + n[n.length-1];
+    out.push(`<div class="hint"><b>Something slowed you down</b>
+      ${list.charAt(0).toUpperCase() + list.slice(1)} slowed your horse down!
+      Give ${gaps.length === 1 ? 'it' : 'each one'} a sensor promoter and the gene that handles it,
+      and your horse will sail straight through.</div>`);
+  }
+  if(!out.length && place === 0){
+    out.push(`<div class="hint"><b>Clean run</b>
+      Every hazard was answered by a gene that switched on exactly where it was needed, and the horse still had energy left.
+      That's what regulation buys you.</div>`);
+  }
+  return out.join('');
+}
+
+function winAnim(h){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  h.el.animate(
+    [{transform:'translateY(0) rotate(0)'},{transform:'translateY(-11px) rotate(-8deg)'},
+     {transform:'translateY(0) rotate(0)'},{transform:'translateY(-6px) rotate(-4deg)'},
+     {transform:'translateY(0) rotate(0)'}],
+    {duration:1100, easing:'ease-out'});
+  const strip = h.el.parentElement;
+  const c = document.createElement('div'); c.className = 'confetti';
+  const cols = ['#e8471f','#f2c33d','#2f7fc4','#1f7a4d','#c057a8'];
+  for(let i=0;i<34;i++){
+    const s = document.createElement('i');
+    s.style.left = (55 + Math.random()*42) + '%';
+    s.style.background = cols[i % cols.length];
+    s.style.animationDuration = (0.9 + Math.random()*0.9) + 's';
+    s.style.animationDelay = (Math.random()*0.35) + 's';
+    c.appendChild(s);
+  }
+  strip.appendChild(c);
+  setTimeout(()=>c.remove(), 2600);
+}
+
+function resetRace(){
+  if(raf) cancelAnimationFrame(raf);
+  if(cdTimer){ clearTimeout(cdTimer); cdTimer = null; }
+  document.querySelectorAll('.cd').forEach(e=>e.remove());
+  racing = false;
+  horses = buildHorses();
+  renderLanes();
+  resultsEl.innerHTML = '';
+  refresh();
+}
+
+/* ============================================================
+   WIRING
+   ============================================================ */
+function renderLaneCfg(){
+  const box = $('#lanecfg');
+  box.innerHTML = laneKind.map((k,i)=> i === 0
+    ? `<span class="lanepick fixed"><span class="lp-n">1 &middot; ${laneName(0)}</span></span>`
+    : `<span class="lanepick" data-lane="${i}"><span class="lp-n">${i+1}</span>
+         <button data-k="player" aria-pressed="${k === 'player'}">Player</button>
+         <button data-k="bot" aria-pressed="${k === 'bot'}">Bot</button></span>`
+  ).join('');
+}
+$('#lanecfg').onclick = e=>{
+  const btn = e.target.closest('button[data-k]');
+  if(!btn || racing) return;
+  const i = +btn.closest('[data-lane]').dataset.lane;
+  if(laneKind[i] === btn.dataset.k) return;
+  laneKind[i] = btn.dataset.k;
+  renderLaneCfg();
+  renderBuilders();
+  resetRace();
+};
+$('#start').onclick = startRace;
+$('#reset').onclick = ()=>{
+  buildersEl.querySelectorAll('input').forEach(i=>i.value='');
+  refresh(); resetRace();
+  const first = buildersEl.querySelector('input'); if(first) first.focus();
+};
+$('#showCost').onchange = refresh;
+
+/* ---- facilitator lock ---- */
+const FACIL_CODE = 'aegis';
+let facilUnlocked = false;
+try { facilUnlocked = localStorage.getItem('gd_facil') === '1'; } catch(e){}
+
+function paintLock(){
+  $('#facilLock').hidden = facilUnlocked;
+  $('#facilBody').hidden = !facilUnlocked;
+  if(!facilUnlocked){ $('#showCost').checked = false; }
+  refresh();
+}
+function tryUnlock(){
+  const v = $('#facilCode').value.trim().toLowerCase();
+  if(v === FACIL_CODE){
+    facilUnlocked = true;
+    try { localStorage.setItem('gd_facil','1'); } catch(e){}
+    $('#facilCode').value = ''; $('#facilErr').hidden = true;
+    paintLock();
+  } else {
+    $('#facilErr').hidden = false;
+    $('#facilCode').select();
+  }
+}
+$('#facilGo').onclick = tryUnlock;
+$('#facilCode').addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); tryUnlock(); }});
+$('#facilCode').addEventListener('input', ()=>{ $('#facilErr').hidden = true; });
+$('#facilLockBtn').onclick = ()=>{
+  facilUnlocked = false;
+  try { localStorage.removeItem('gd_facil'); } catch(e){}
+  paintLock();
+};
+
+$('#examples').innerHTML = EXAMPLES.map((e,i)=>`<button data-ex="${i}">${e.label}</button>`).join('');
+$('#examples').onclick = e=>{
+  const b = e.target.closest('[data-ex]'); if(!b) return;
+  const ex = EXAMPLES[+b.dataset.ex];
+  for(let i=0;i<MAX_C;i++){
+    const r = ex.rows[i] || [];
+    $(`#b0r${i}p`).value = r[0] || '';
+    $(`#b0r${i}r`).value = r[1] || '';
+    $(`#b0r${i}g`).value = r[2] || '';
+  }
+  refresh(); resetRace();
+};
+
+renderLaneCfg();
+renderBuilders();
+paintLock();
+resetRace();
+</script>
+
+</body>
+</html>
